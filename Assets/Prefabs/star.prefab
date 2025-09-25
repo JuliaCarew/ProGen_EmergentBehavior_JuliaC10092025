@@ -209,13 +209,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ddd7e1c599acf046b64c6d8504eaaf0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  maxBrightness: 1
+  minLifetime: 5
+  maxLifetime: 50
   age: 0
   brightness: 0.1
+  baseFuel: 1000
+  coolingFactor: 1
+  size: 1
+  isGiant: 0
+  deathTimer: 10
+  unconnectedTimer: 0
+  unconnectedThreshold: 3
+  blackHolePrefab: {fileID: 1797616369326993469, guid: e9d025db1ea65be4b8eaf69504c025d1, type: 3}
   currentSegments: 0
   maxSegments: 5
   connectedStars: []
   isAlive: 1
   detectionRadius: 1
+  freeMovementDir: {x: 0, y: 0}
+  lastPosition: {x: 0, y: 0}
 --- !u!114 &425924591470444322
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -228,3 +241,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2b91999d37ff7b4e8effb865a392316, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  maxDrawDistance: 2

@@ -25,7 +25,7 @@ public class StarManager : MonoBehaviour
         {
             Vector2 position = new Vector2(UnityEngine.Random.Range(-10f, 10f), UnityEngine.Random.Range(-10f, 10f));
             Instantiate(starPrefab, position, Quaternion.identity);
-            Debug.Log($"Generated Star at Position: {position}"); 
+            //Debug.Log($"Generated Star at Position: {position}"); 
         }
     }
 
@@ -35,7 +35,7 @@ public class StarManager : MonoBehaviour
         foreach (Star star in allStars)
         {
             star.ConnectToStars(allStars);
-            Debug.Log($"Star at {star.transform.position} connected to {star.connectedStars.Count} stars.");
+            //Debug.Log($"Star at {star.transform.position} connected to {star.connectedStars.Count} stars.");
         }
     }
 }

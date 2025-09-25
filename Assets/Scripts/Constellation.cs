@@ -8,29 +8,44 @@ public class Constellation : MonoBehaviour
 
     void Update()
     {
+        if (stars.Count == 0) return;
+
+        UpdateMoveDirection();
         MoveConstellation();
-        HandleAging();
+    }
+
+    void UpdateMoveDirection()
+    {
+        // find oldest star and move in the direction it is going
+        Star oldest = null;
+        int maxAge = int.MinValue;
+
+        foreach (Star s in stars)
+        {
+            if (s.isAlive && s.age > maxAge)
+            {
+                maxAge = (int)s.age;
+                oldest = s;
+            }
+        }
+
+        if (oldest != null)
+        {
+            // derive velocity from position change
+            Vector2 velocity = ((Vector2)oldest.transform.position - oldest.lastPosition) / Time.deltaTime;
+            movementDirection = velocity.normalized;; // follow oldest star
+        }
     }
 
     void MoveConstellation()
     {
+        if (movementDirection == Vector2.zero) return;
+
         foreach (Star star in stars)
         {
             if (star.isAlive)
             {
                 star.transform.Translate(movementDirection * Time.deltaTime);
-            }
-        }
-    }
-
-    void HandleAging()
-    {
-        foreach (Star star in stars)
-        {
-            if (star.isAlive)
-            {
-                star.age++;
-                //if (star.age > 100) star.Blink();
             }
         }
     }

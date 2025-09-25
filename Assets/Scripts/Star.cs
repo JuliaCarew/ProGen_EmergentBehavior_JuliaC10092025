@@ -1,41 +1,160 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class Star : MonoBehaviour
 {
-    public int age;
-    public float brightness = 0.1f;
+    #region variables
 
+    [Header("Aging Settings")]
+    public float maxBrightness = 1f;
+    public float minLifetime = 5f;
+    public float maxLifetime = 50f;
+    private float lifetime;
+    public float age;
+    public float brightness = 0.1f;
+    // fuel - for interesting emergent rules
+    public float baseFuel = 1000f;        // base lifetime in frames or seconds
+    public float coolingFactor = 1f;      // multiplier on how fast it dies when in constellation with many stars
+
+    [Header("Emergent Properties")]
+    public float size = 1f;
+    private int giantThreshold;
+    public bool isGiant = false;
+
+    [Header("Black Hole Settings")]
+    public float deathTimer = 10f; // how long before it can die
+    public float unconnectedTimer = 0f; // how long it's been without connections
+    public float unconnectedThreshold = 3f; // time until black hole
+    public GameObject blackHolePrefab;
+
+    [Header("Connections")]
     public int currentSegments = 0;
     public int maxSegments = 5;
-
-    // stars will need to track their connections to other stars
-    public List<Star> connectedStars = new List<Star>();
+    public List<Star> connectedStars = new List<Star>(); // stars will need to track their connections to other stars
     public bool isAlive = true;
 
-    // detection
+    [Header("Detection / Movement")]
     public float detectionRadius = 1f;
+    public Vector2 freeMovementDir;
+    [HideInInspector] public Vector2 lastPosition; // get previous movement for constellation movement
+
+    private SpriteRenderer sr;
+
+    #endregion
+
+    void Awake()
+    {
+        sr = GetComponent<SpriteRenderer>();
+        UpdateAppearance();
+        StarManager.allStars.Add(this);
+    }
 
     void Start()
     {
-        StarManager.allStars.Add(this);
-        age = 0;
-    }
-    void Update()
-    {
-        
+        lifetime = UnityEngine.Random.Range(minLifetime, maxLifetime);
+        freeMovementDir = UnityEngine.Random.insideUnitCircle.normalized;
+        lastPosition = transform.position;
+        giantThreshold = UnityEngine.Random.Range(2, 4);
+
+        // initialise lifetime
+        baseFuel = 1000f;
+        coolingFactor = 1f;
     }
 
-    void Age()
+    void OnDestroy()
     {
-        age++;
-        if (age > 1000) Die(); // star dies after 1000 frames
-        if (isAlive)
+        // unregister when dying 
+        StarManager.allStars.Remove(this);
+    }
+
+    void Update()
+    {
+        if (!isAlive) return;
+
+        age += Time.deltaTime;
+
+        // brightness increases with age
+        float normalisedAge = (age * coolingFactor) / lifetime;
+        brightness = Mathf.Lerp(0.1f, maxBrightness, normalisedAge);
+
+        // die when lifetime exceeded
+        if (normalisedAge >= 1f)
         {
-            Blink();
+            StartCoroutine(Die());
+            return;
         }
+
+        Blink();
+        FreeMove();
+        //UpdateVisuals();
+
+        // Giant star check
+        if (!isGiant && connectedStars.Count >= giantThreshold)
+        {
+            Debug.Log($"{name} became GIANT!");
+            BecomeGiant();
+        }
+
+        // Unconnected star timer
+        if (connectedStars.Count == 0)
+        {
+            unconnectedTimer += Time.deltaTime;
+            if (unconnectedTimer >= unconnectedThreshold)
+            {
+                Debug.Log($"{name} became BLACK HOLE!");
+                BecomeBlackHole();
+            }
+        }
+        else
+        {
+            unconnectedTimer = 0f;
+        }
+
+        lastPosition = transform.position; // store position
+    }
+
+    void FreeMove()
+    {
+        if (connectedStars.Count == 0)
+        {
+            transform.Translate(freeMovementDir * Time.deltaTime);
+        }
+    }
+
+    void BecomeGiant()
+    {
+        isGiant = true;
+        size *= 2.5f;
+        brightness *= 1.9f;
+        deathTimer *= 8f; // last longer
+        UpdateAppearance();
+    }
+
+    void BecomeBlackHole()
+    {
+        // spawn a black hole prefab at this star’s position
+        Instantiate(blackHolePrefab, transform.position, Quaternion.identity);
+        Destroy(gameObject);
+    }
+
+    public void UpdateAppearance()
+    {
+        if (sr != null)
+        {
+            sr.color = Color.white * brightness;
+            transform.localScale = Vector3.one * size;
+        }
+    }
+
+    public void OnConnectedStarAdded()
+    {
+        // Called when a star connects to this one
+        brightness *= 1.2f; // brighten 20% on first connection
+        deathTimer *= 0.9f; // cool faster
+        UpdateAppearance();
     }
 
     public void ConnectToStars(List<Star> allStars)
@@ -79,33 +198,60 @@ public class Star : MonoBehaviour
 
         connectedStars.Add(targetStar); // add the target star to the connections
         targetStar.connectedStars.Add(this); // target star also needs to know about the connection
+        
+        // boost brightness 20%
+        brightness = Mathf.Min(brightness + 0.2f, 1f);
+        targetStar.brightness = Mathf.Min(targetStar.brightness + 0.2f, 1f);
 
-        brightness += 0.2f; // increase brightness by 20% for each segment
-        targetStar.brightness += 0.2f;
+        // increase cooling factor for both stars
+        coolingFactor += 0.1f; // each new link burns 10% faster
+        targetStar.coolingFactor += 0.1f;
     }
 
-    public void Blink()
-    {
-        float blinkChance = UnityEngine.Random.value;
-        if (blinkChance < 0.3f) brightness = 0.5f; // 30% chance to go to 50% brightness
-        else if (blinkChance < 0.6f) brightness = 0.1f; // 30% chance to go to 10% brightness
-        //else Die(); // 40% chance to die
-    }
-
-    public void Die()
+    public IEnumerator Die()
     {
         isAlive = false;
         // remove all connections
         foreach (Star star in connectedStars)
-        {
             star.connectedStars.Remove(this);
-            star.brightness -= 0.2f; // decrease brightness of connected stars
-        }
-        connectedStars.Clear();
-        brightness = 0f; // star is dead, no brightness
 
-        // will need to notify segments to stop drawing lines
-        // delete instance of star prefab
+        connectedStars.Clear();
+
+        float t = 0f;
+        Color startColor = sr.color;
+
+        if (t < 1f)
+        {
+            t += Time.deltaTime;
+            sr.color = Color.Lerp(startColor, Color.black, t);
+            yield return null;
+        }
+        Destroy(gameObject);
+    }
+
+    void Blink()
+    {
+        if (UnityEngine.Random.value < 0.01f) // 1% chance each frame
+        {
+            int ev = UnityEngine.Random.Range(0, 3);
+            switch (ev)
+            {
+                case 0: // die early
+                    StartCoroutine(Die());
+                    break;
+                case 1: // dim
+                    brightness *= 0.5f;
+                    break;
+                case 2: // disconnect
+                    if (connectedStars.Count > 0)
+                    {
+                        Star other = connectedStars[0];
+                        connectedStars.Remove(other);
+                        other.connectedStars.Remove(this);
+                    }
+                    break;
+            }
+        }
     }
 }
 // make stars blink between brightness levels
