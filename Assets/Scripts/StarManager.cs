@@ -4,10 +4,22 @@ using UnityEngine;
 
 public class StarManager : MonoBehaviour
 {
+    public static StarManager instance { get; private set; }
+
     public GameObject starPrefab;
     public int initialStars = 50;
 
     public static List<Star> allStars = new List<Star>();
+
+    void Awake()
+    {
+        if (instance != null && instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        instance = this;
+    }
 
     void Start()
     {

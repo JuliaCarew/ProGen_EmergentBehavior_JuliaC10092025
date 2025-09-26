@@ -2,29 +2,48 @@ using UnityEngine;
 
 public class BlackHole : MonoBehaviour
 {
-    public float pullRadius = 3f;
-    public float pullForce = 5f;
-    public float lifeTime = 10f;
+    public float pullRadius = 3f; // area ppulled
+    public float pullForce = 5f; // how strong the pull is
+    public float lifeTime = 10f; // how long before it dies
+    public int starsOnDeath = 15; // how many stars to spawn when destroyed
 
     void Update()
     {
-        //lifeTime -= Time.deltaTime;
-        //if (lifeTime <= 0) Destroy(gameObject);
+        lifeTime -= Time.deltaTime;
+        if (lifeTime <= 0)
+        {
+            Destroy(gameObject);
+            return;
+        }
 
         // find all colliders in range
-        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, pullRadius);
-
-        foreach (var hit in hits)
+        for (int i = StarManager.allStars.Count - 1; i >= 0; i--)
         {
-            Star star = hit.GetComponent<Star>();
-            if (star == null || !star.isAlive)
-                continue;
+            Star star = StarManager.allStars[i];
+            if (star == null || !star.isAlive) continue;
 
-            // push away stars
-            Vector2 dir = (star.transform.position - transform.position).normalized;
+            float dist = Vector2.Distance(transform.position, star.transform.position);
+            if (dist <= pullRadius)
+            {
+                // PULL stars toward the black hole
+                Vector2 dir = ((Vector2)transform.position - (Vector2)star.transform.position).normalized;
+                star.freeMovementDir += dir * pullForce * Time.deltaTime;
+            }
+        }
+    }
 
-            // apply movement/force to star’s direction
-            star.freeMovementDir += dir * pullForce * Time.deltaTime;
+    void OnDestroy()
+    {
+        // when black hole dies, spawn stars
+        if (StarManager.instance != null && StarManager.instance.starPrefab != null)
+        {
+            for (int i = 0; i < Random.Range(5,starsOnDeath); i++)
+            {
+                Vector2 position = (Vector2)transform.position + Random.insideUnitCircle * 2f;
+                GameObject newStar = Instantiate(StarManager.instance.starPrefab, position, Quaternion.identity);
+                // optionally tweak its freeMovementDir so they burst outward
+                newStar.GetComponent<Star>().freeMovementDir = Random.insideUnitCircle.normalized;
+            }
         }
     }
 
