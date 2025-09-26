@@ -8,25 +8,23 @@ public class BlackHole : MonoBehaviour
 
     void Update()
     {
-        lifeTime -= Time.deltaTime;
-        if (lifeTime <= 0) Destroy(gameObject);
+        //lifeTime -= Time.deltaTime;
+        //if (lifeTime <= 0) Destroy(gameObject);
 
+        // find all colliders in range
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, pullRadius);
+
         foreach (var hit in hits)
         {
             Star star = hit.GetComponent<Star>();
-            if (star != null)
-            {
-                // Pull star toward black hole
-                Vector2 dir = (transform.position - star.transform.position).normalized;
-                star.transform.position = Vector2.MoveTowards(star.transform.position, transform.position, pullForce * Time.deltaTime);
+            if (star == null || !star.isAlive)
+                continue;
 
-                // destroy star if too close
-                if (Vector2.Distance(star.transform.position, transform.position) < 0.2f)
-                {
-                    Destroy(star.gameObject);
-                }
-            }
+            // push away stars
+            Vector2 dir = (star.transform.position - transform.position).normalized;
+
+            // apply movement/force to star’s direction
+            star.freeMovementDir += dir * pullForce * Time.deltaTime;
         }
     }
 

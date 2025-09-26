@@ -14,7 +14,7 @@ public class Star : MonoBehaviour
     public float maxLifetime = 50f;
     private float lifetime;
     public float age;
-    public float brightness = 0.1f;
+    public float brightness = 0.5f;
     // fuel - for interesting emergent rules
     public float baseFuel = 1000f;        // base lifetime in frames or seconds
     public float coolingFactor = 1f;      // multiplier on how fast it dies when in constellation with many stars
@@ -89,7 +89,6 @@ public class Star : MonoBehaviour
 
         Blink();
         FreeMove();
-        //UpdateVisuals();
 
         // Giant star check
         if (!isGiant && connectedStars.Count >= giantThreshold)
